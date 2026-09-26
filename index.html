@@ -32,7 +32,7 @@
           <div class="hero-actions">
             <button class="primary" data-go="trade">Start a trade</button>
             <button class="ghost-light" data-go="track">Track a trade</button>
-            <span class="updated" id="lastUpdated">Updated just now</span>
+            <span class="updated" id="lastUpdated">Loading verified rates…</span>
           </div>
         </div>
         <div class="hero-stat public-message">
@@ -106,18 +106,18 @@
 
         <div class="admin-grid">
           <div class="form-card">
-            <div class="section-title"><div><h3>Simulate WhatsApp rate message</h3><p class="tiny">Paste the exact message the Chinese supplier sends you. CardFlow will process it the same way the future WhatsApp connection will.</p></div><span class="private-badge">PRIVATE</span></div>
-            <label>Customer receives<div class="percent-row"><input id="customerPercent" type="number" min="1" max="100" value="70" /><span>% of supplier rate</span></div></label>
-            <label>CardFlow WhatsApp<input id="supplierWhatsapp" type="tel" value="+2348071895503" readonly /><span class="tiny">This single WhatsApp number receives supplier rate updates and customer trade requests.</span></label>
+            <div class="section-title"><div><h3>Publish supplier rates</h3><p class="tiny">Copy the complete rate message from your WhatsApp group, paste it here, then publish. The customer board updates for everyone.</p></div><span class="private-badge">ADMIN</span></div>
+            <label>Customer receives<div class="percent-row"><input id="customerPercent" type="number" value="70" readonly /><span>% of supplier rate</span></div></label>
+            <label>Customer contact WhatsApp<input id="supplierWhatsapp" type="tel" value="+2348071895503" readonly /></label>
             <input id="businessWhatsapp" type="hidden" value="2348071895503" />
             <label>WhatsApp message<textarea id="supplierText" rows="16" placeholder="Paste the full supplier WhatsApp message here..."></textarea></label>
-            <div class="simulation-flow"><span>1. Message received</span><span>2. Rates parsed</span><span>3. 30% margin applied</span><span>4. Website updated</span></div>
-            <button id="parseRates" class="primary full">Simulate WhatsApp update</button><button id="loadSample" class="secondary full">Load sample supplier message</button>
+            <label>Private publish key<input id="publishKey" type="password" autocomplete="off" placeholder="Enter your publish key" /><span class="tiny">Required to change the live board. This key is not saved in your browser.</span></label>
+            <button id="publishRates" class="primary full">Publish rates to website</button>
             <div id="parseReport" class="parse-report hidden"></div>
           </div>
           <div>
             <div class="activity"><h3>Recent activity</h3><div id="activityList" class="activity-list"></div></div>
-            <div class="webhook-card"><div><span class="dot"></span><strong>WhatsApp Business webhook</strong></div><p>Ready to connect after deployment. Incoming supplier messages can feed this same parser automatically.</p><span class="badge-muted">Not connected yet</span></div>
+            <div class="webhook-card"><div><span class="dot"></span><strong>Manual updates</strong></div><p>Copy a complete supplier message from WhatsApp and publish it above. New customer rates appear on the shared board.</p></div>
           </div>
         </div>
 
