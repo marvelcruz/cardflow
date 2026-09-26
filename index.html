@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>CardFlow — Live Gift Card Rates</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <button class="brand brand-button" data-go="rates" aria-label="CardFlow home"><span class="brand-mark">C</span><span>CardFlow</span></button>
+    <nav>
+      <button class="nav-btn active" data-view="rates">Live Rates</button>
+      <button class="nav-btn" data-view="trade">Sell Card</button>
+      <button class="nav-btn" data-view="track">Track Trade</button>
+      <button class="nav-btn" data-view="admin">Admin</button>
+    </nav>
+    <a class="whatsapp" id="whatsappLink" href="#">WhatsApp</a>
+  </header>
+
+  <main>
+    <section id="rates" class="view active">
+      <div class="hero">
+        <div>
+          <p class="eyebrow">LIVE CUSTOMER RATES</p>
+          <h1>Check your rate. Start your trade. Track every step.</h1>
+          <p class="hero-copy">Rates can change during the day. Always confirm availability before sending a card.</p>
+          <div class="hero-actions">
+            <button class="primary" data-go="trade">Start a trade</button>
+            <button class="ghost-light" data-go="track">Track a trade</button>
+            <span class="updated" id="lastUpdated">Updated just now</span>
+          </div>
+        </div>
+        <div class="hero-stat public-message">
+          <span>Simple & transparent</span>
+          <strong>Live competitive rates</strong>
+          <small>See your estimated payout before you submit.</small>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="Search Apple, Steam, Sephora…" />
+        <select id="categoryFilter">
+          <option value="all">All categories</option>
+          <option value="Apple">Apple</option><option value="Steam">Steam</option><option value="Razer">Razer</option>
+          <option value="Xbox">Xbox</option><option value="PSN">PSN</option><option value="Gift Card">Gift Cards</option><option value="Other">Other</option>
+        </select>
+      </div>
+      <div id="rateGrid" class="rate-grid"></div>
+    </section>
+
+    <section id="trade" class="view">
+      <div class="panel two-col">
+        <div>
+          <p class="eyebrow">NEW TRADE</p>
+          <h2>Check availability before sending your card.</h2>
+          <p class="muted">Choose a card, enter the value, and we’ll calculate the estimated payout using the current customer rate.</p>
+          <div class="steps-mini"><span class="on">1</span> Check availability <span>2</span> Submit card <span>3</span> Payment</div>
+        </div>
+        <form id="tradeForm" class="form-card">
+          <label>Gift card<select id="tradeCard" required></select></label>
+          <label>Card value<div class="input-prefix"><span>$</span><input id="tradeAmount" type="number" min="1" placeholder="100" required /></div></label>
+          <div class="quote" id="quoteBox"><span>Estimated payout</span><strong>₦0</strong><small>Select a fixed-rate card to calculate.</small><div id="quoteMath" class="quote-math"></div></div>
+          <div class="whatsapp-handoff-note">
+            <strong>Continue on WhatsApp</strong>
+            <span>We’ll open your WhatsApp with the card details already filled in.</span>
+          </div>
+          <button class="primary full" type="submit">Check availability on WhatsApp</button>
+        </form>
+      </div>
+      <div id="tradeResult" class="trade-result hidden"></div>
+    </section>
+
+    <section id="track" class="view">
+      <div class="panel track-panel">
+        <div><p class="eyebrow">TRACK TRADE</p><h2>See where your trade is.</h2><p class="muted">Enter the trade ID you received when you started the trade.</p></div>
+        <form id="trackForm" class="track-form"><input id="trackId" placeholder="GC-ABCDE" required /><button class="primary">Track</button></form>
+      </div>
+      <div id="trackResult" class="hidden"></div>
+    </section>
+
+    <section id="admin" class="view">
+      <div id="adminLock" class="login-shell">
+        <div class="login-card">
+          <div class="brand-mark big">C</div><p class="eyebrow">PRIVATE ADMIN</p><h2 id="loginTitle">Admin access</h2>
+          <p class="muted" id="loginHelp">Enter your admin PIN to continue.</p>
+          <form id="adminLoginForm"><input id="adminPin" type="password" inputmode="numeric" minlength="4" maxlength="12" placeholder="Admin PIN" required /><button class="primary full">Continue</button></form>
+          <p class="tiny" id="pinSetupNote"></p>
+        </div>
+      </div>
+
+      <div id="adminApp" class="hidden">
+        <div class="admin-head">
+          <div><p class="eyebrow">PRIVATE ADMIN</p><h2>Rates, trades and payouts.</h2><p class="muted">Paste supplier updates, manage trade status, and keep supplier pricing private.</p></div>
+          <div class="admin-actions"><button id="lockAdmin" class="secondary">Lock admin</button></div>
+        </div>
+
+        <div class="summary-cards admin-summary">
+          <div><span>Published rates</span><strong id="publishedCount">0</strong></div><div><span>ASK rates</span><strong id="askCount">0</strong></div>
+          <div><span>Open trades</span><strong id="openTradeCount">0</strong></div><div><span>Awaiting payment</span><strong id="awaitingPaymentCount">0</strong></div>
+        </div>
+
+        <div class="admin-grid">
+          <div class="form-card">
+            <div class="section-title"><div><h3>Simulate WhatsApp rate message</h3><p class="tiny">Paste the exact message the Chinese supplier sends you. CardFlow will process it the same way the future WhatsApp connection will.</p></div><span class="private-badge">PRIVATE</span></div>
+            <label>Customer receives<div class="percent-row"><input id="customerPercent" type="number" min="1" max="100" value="70" /><span>% of supplier rate</span></div></label>
+            <label>CardFlow WhatsApp<input id="supplierWhatsapp" type="tel" value="+2348071895503" readonly /><span class="tiny">This single WhatsApp number receives supplier rate updates and customer trade requests.</span></label>
+            <input id="businessWhatsapp" type="hidden" value="2348071895503" />
+            <label>WhatsApp message<textarea id="supplierText" rows="16" placeholder="Paste the full supplier WhatsApp message here..."></textarea></label>
+            <div class="simulation-flow"><span>1. Message received</span><span>2. Rates parsed</span><span>3. 30% margin applied</span><span>4. Website updated</span></div>
+            <button id="parseRates" class="primary full">Simulate WhatsApp update</button><button id="loadSample" class="secondary full">Load sample supplier message</button>
+            <div id="parseReport" class="parse-report hidden"></div>
+          </div>
+          <div>
+            <div class="activity"><h3>Recent activity</h3><div id="activityList" class="activity-list"></div></div>
+            <div class="webhook-card"><div><span class="dot"></span><strong>WhatsApp Business webhook</strong></div><p>Ready to connect after deployment. Incoming supplier messages can feed this same parser automatically.</p><span class="badge-muted">Not connected yet</span></div>
+          </div>
+        </div>
+
+        <div class="admin-table-wrap"><div class="section-title"><div><h3>Private rate table</h3><p class="tiny">Supplier total = supplier rate × card amount. Your margin = 30% of supplier total. Customer payout = 70%.</p></div></div><table><thead><tr><th>Card</th><th>Range</th><th>Supplier</th><th>Customer</th><th>Status</th></tr></thead><tbody id="adminTable"></tbody></table></div>
+
+        <div class="admin-table-wrap trades-wrap"><div class="section-title"><div><h3>Trade management</h3><p class="tiny">Advance each trade as the supplier confirms it.</p></div></div><div id="adminTrades" class="admin-trades"></div></div>
+      </div>
+    </section>
+  </main>
+
+  <template id="rateCardTemplate"><article class="rate-card"><div class="rate-top"><span class="pill category"></span><span class="pill status"></span></div><h3></h3><p class="range"></p><div class="rate-value"></div><button class="secondary trade-btn">Trade this card</button></article></template>
+
+  <script src="app.js"></script>
+</body>
+</html>
