@@ -28,4 +28,6 @@ Connect an Upstash Redis database to the Vercel project. Vercel provides `KV_RES
 
 Sign in to Admin with the PIN. Copy the entire supplier rate list from WhatsApp, paste it into Admin, and click **Publish rates to website**. The server validates the session and list, stores it in Redis, and serves only the 70% customer rates. Invalid messages leave the prior board intact. The published board is shared across visitors; trade statuses are still stored per browser.
 
+You can paste multiple supplier updates together. For each matching card and accepted amount, the highest numeric supplier rate wins; an ASK rate never overrides a numeric rate. Overlapping amount ranges are split so each amount uses the correct best rate. A numeric rate without an accepted amount is displayed as ASK until the amount is confirmed. Do not publish example or stale messages as current rates.
+
 The Meta webhook remains available for verification and signed delivery, but it does not publish group messages. Manual publishing does not require the suppliers to change their WhatsApp workflow. Trade statuses still use each browser's local storage and are not a shared back office.
