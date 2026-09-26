@@ -106,7 +106,9 @@
         <div class="admin-grid">
           <div class="form-card">
             <div class="section-title"><div><h3>Publish supplier rates</h3><p class="tiny">Paste complete supplier updates together. For each card and accepted amount, CardFlow uses the highest stated rate. The customer board updates for everyone.</p></div><span class="private-badge">ADMIN</span></div>
-            <label>Customer receives<div class="percent-row"><input id="customerPercent" type="number" value="70" readonly /><span>% of supplier rate</span></div></label>
+            <label>Customer receives<div class="percent-row"><input id="customerPercent" type="number" min="1" max="100" step="0.01" value="70" /><span>% of supplier rate</span></div></label>
+            <button id="savePercent" class="secondary" type="button">Save percentage</button>
+            <div id="percentReport" class="parse-report hidden"></div>
             <label>Customer contact WhatsApp<input id="supplierWhatsapp" type="tel" value="+2348071895503" readonly /></label>
             <input id="businessWhatsapp" type="hidden" value="2348071895503" />
             <label>WhatsApp message<textarea id="supplierText" rows="16" placeholder="Paste the full supplier WhatsApp message here..."></textarea></label>
@@ -119,7 +121,7 @@
           </div>
         </div>
 
-        <div class="admin-table-wrap"><div class="section-title"><div><h3>Private rate table</h3><p class="tiny">Supplier total = supplier rate × card amount. Your margin = 30% of supplier total. Customer payout = 70%.</p></div></div><table><thead><tr><th>Card</th><th>Range</th><th>Supplier</th><th>Customer</th><th>Status</th></tr></thead><tbody id="adminTable"></tbody></table></div>
+        <div class="admin-table-wrap"><div class="section-title"><div><h3>Private rate table</h3><p class="tiny">Supplier total = supplier rate × card amount. Your margin = <span id="marginPercent">30</span>%. Customer payout = <span id="customerPercentLabel">70</span>%.</p></div></div><table><thead><tr><th>Card</th><th>Range</th><th>Supplier</th><th>Customer</th><th>Status</th></tr></thead><tbody id="adminTable"></tbody></table></div>
 
         <div class="admin-table-wrap trades-wrap"><div class="section-title"><div><h3>Trade management</h3><p class="tiny">Advance each trade as the supplier confirms it.</p></div></div><div id="adminTrades" class="admin-trades"></div></div>
       </div>
