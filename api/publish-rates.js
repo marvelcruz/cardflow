@@ -1,5 +1,5 @@
 const { randomUUID } = require('node:crypto');
-const { parseSupplierRates, updateCount } = require('../lib/supplier-rates');
+const { parseSupplierRates } = require('../lib/supplier-rates');
 const { configured, publishRates } = require('../lib/rates-store');
 const { isAdmin } = require('../lib/admin-auth');
 
@@ -11,7 +11,6 @@ module.exports = async function handler(req, res) {
   }
   if (!configured()) return res.status(503).json({ error: 'Rate database unavailable' });
   const body = typeof req.body === 'string' ? (() => { try { return JSON.parse(req.body); } catch { return null; } })() : req.body;
-  if (typeof body?.message === 'string' && updateCount(body.message) > 1) return res.status(400).json({ error: 'This paste contains more than one supplier update. Paste only one complete current update at a time. No rates were changed.' });
   const rates = parseSupplierRates(body?.message);
   if (!rates) return res.status(400).json({ error: 'Paste the complete supplier rate list. No rates were changed.' });
   try {
