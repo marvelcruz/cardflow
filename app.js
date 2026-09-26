@@ -34,13 +34,13 @@ function renderRates(){
 function rateForAmount(name,amount){return rates.find(r=>r.name===name && r.min!=null && amount>=r.min && (r.max==null||amount<=r.max));}
 function renderTradeOptions(){const prev=$('#tradeCard').value;const names=[...new Set(rates.map(r=>r.name))];$('#tradeCard').innerHTML=names.map(name=>`<option value="${esc(name)}">${esc(name)}</option>`).join('');if(names.includes(prev))$('#tradeCard').value=prev;}
 function renderAdmin(){
-  $('#customerPercent').value=70;$('#supplierWhatsapp').value='+'+supplierWhatsapp;$('#businessWhatsapp').value=businessWhatsapp;$('#adminTable').innerHTML=rates.map(r=>`<tr><td>${esc(r.name)}</td><td>${rangeLabel(r)}</td><td class="private">Private on server</td><td class="public">${publicRate(r)==null?'ASK':'₦'+fmt(publicRate(r))+'/$'}</td><td>${publicRate(r)==null?'Needs confirmation':'Published'}</td></tr>`).join('');
+  if(document.activeElement!==$('#customerPercent'))$('#customerPercent').value=customerPercent;$('#marginPercent').textContent=fmt(100-customerPercent);$('#customerPercentLabel').textContent=fmt(customerPercent);$('#supplierWhatsapp').value='+'+supplierWhatsapp;$('#businessWhatsapp').value=businessWhatsapp;$('#adminTable').innerHTML=rates.map(r=>`<tr><td>${esc(r.name)}</td><td>${rangeLabel(r)}</td><td class="private">Private on server</td><td class="public">${publicRate(r)==null?'ASK':'₦'+fmt(publicRate(r))+'/$'}</td><td>${publicRate(r)==null?'Needs confirmation':'Published'}</td></tr>`).join('');
   $('#openTradeCount').textContent=trades.filter(t=>OPEN.has(t.status)).length;$('#awaitingPaymentCount').textContent=trades.filter(t=>t.status==='Bank details received').length;renderAdminTrades();
 }
 function renderActivity(){$('#activityList').innerHTML=(activities.length?activities:[{msg:'No activity yet',time:''}]).slice(0,10).map(a=>`<div class="activity-item"><strong>${esc(a.msg)}</strong><br><small>${esc(a.time)}</small></div>`).join('');}
 function renderAdminTrades(){
   const root=$('#adminTrades');if(!trades.length){root.innerHTML='<div class="empty-state">No trades yet.</div>';return;}
-  root.innerHTML=trades.map(t=>`<article class="trade-admin-card"><div class="trade-admin-main"><div><span class="trade-id">${esc(t.id)}</span><h4>${esc(t.card)} · $${fmt(t.amount)}</h4><p>Started from WhatsApp</p></div><div class="trade-money">${t.payout?`₦${fmt(t.payout)}`:'ASK'}<small>${esc(t.status)}</small></div></div>${t.supplierValue!=null?`<div class="admin-calc"><span>Supplier total <b>₦${fmt(t.supplierValue)}</b></span><span>Your 30% <b>₦${fmt(t.margin)}</b></span><span>Customer payout <b>₦${fmt(t.payout)}</b></span></div>`:''}${tradeActionHTML(t)}</article>`).join('');
+  root.innerHTML=trades.map(t=>`<article class="trade-admin-card"><div class="trade-admin-main"><div><span class="trade-id">${esc(t.id)}</span><h4>${esc(t.card)} · $${fmt(t.amount)}</h4><p>Started from WhatsApp</p></div><div class="trade-money">${t.payout?`₦${fmt(t.payout)}`:'ASK'}<small>${esc(t.status)}</small></div></div>${t.supplierValue!=null?`<div class="admin-calc"><span>Supplier total <b>₦${fmt(t.supplierValue)}</b></span><span>Your ${fmt(100-(t.customerPercent??70))}% <b>₦${fmt(t.margin)}</b></span><span>Customer payout <b>₦${fmt(t.payout)}</b></span></div>`:''}${tradeActionHTML(t)}</article>`).join('');
   $$('.trade-action').forEach(b=>b.onclick=()=>advanceTrade(b.dataset.id,b.dataset.action));
 }
 function tradeActionHTML(t){
@@ -60,6 +60,7 @@ async function refreshLiveRates(){
     if(!response.ok)throw new Error('unavailable');
     const data=await response.json();
     if(!Array.isArray(data.rates))throw new Error('invalid');
+    if(Number.isFinite(data.customerPercent))customerPercent=data.customerPercent;
     rates=data.rates;
     $('#lastUpdated').textContent=data.publishedAt?'Verified supplier update: '+new Date(data.publishedAt).toLocaleString():'Waiting for verified supplier rates';
     renderRates();renderTradeOptions();renderAdmin();updateQuote();
@@ -72,7 +73,7 @@ async function refreshLiveRates(){
 
 function updateQuote(){const amt=Number($('#tradeAmount').value||0),r=rateForAmount($('#tradeCard').value,amt),pr=r?publicRate(r):null,box=$('#quoteBox'),math=$('#quoteMath');const payout=r?customerPayout(r,amt):null;box.querySelector('strong').textContent=payout==null?'ASK':`₦${fmt(payout)}`;box.querySelector('small').textContent=pr==null?'Enter an accepted amount or ask CardFlow to confirm.':`Customer rate: ₦${fmt(pr)}/$`;if(!math)return;if(pr==null||!amt){math.innerHTML='';return;}math.innerHTML=`<span>$${fmt(amt)} × ₦${fmt(pr)}/$</span><b>= ₦${fmt(payout)}</b>`;}
 function showView(id){if(id==='admin')openAdmin();$$('.view').forEach(v=>v.classList.toggle('active',v.id===id));$$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===id));window.scrollTo({top:0,behavior:'smooth'});}
-function createTrade(e){e.preventDefault();const amount=Number($('#tradeAmount').value),r=rateForAmount($('#tradeCard').value,amount);if(!r)return alert('This amount is not listed as accepted. Please ask CardFlow to confirm.');const id='GC-'+Math.random().toString(36).slice(2,7).toUpperCase(),pr=publicRate(r),payout=customerPayout(r,amount),supplierValue=supplierTotal(r,amount),margin=ownerMargin(r,amount);const t={id,card:r.name,amount,rate:pr,payout,supplierValue,margin,status:'Checking availability',created:new Date().toISOString(),cardDetails:null,bank:null};trades.unshift(t);log(`New trade ${id}: ${r.name} $${amount}`);renderAll();const lines=[`Hi, I want to sell a gift card.`,`Trade ID: ${id}`,`Card: ${r.name}`,`Amount: $${fmt(amount)}`,pr==null?`Rate: Please confirm availability`:`Customer rate: ₦${fmt(pr)}/$`,payout==null?`Estimated payout: Pending rate confirmation`:`Estimated payout: ₦${fmt(payout)}`,`Please confirm if this card is available before I send it.`];const url=`https://wa.me/${businessWhatsapp}?text=${encodeURIComponent(lines.join('\n'))}`;window.location.href=url;}
+function createTrade(e){e.preventDefault();const amount=Number($('#tradeAmount').value),r=rateForAmount($('#tradeCard').value,amount);if(!r)return alert('This amount is not listed as accepted. Please ask CardFlow to confirm.');const id='GC-'+Math.random().toString(36).slice(2,7).toUpperCase(),pr=publicRate(r),payout=customerPayout(r,amount),supplierValue=supplierTotal(r,amount),margin=ownerMargin(r,amount);const t={id,card:r.name,amount,rate:pr,payout,supplierValue,margin,customerPercent,status:'Checking availability',created:new Date().toISOString(),cardDetails:null,bank:null};trades.unshift(t);log(`New trade ${id}: ${r.name} $${amount}`);renderAll();const lines=[`Hi, I want to sell a gift card.`,`Trade ID: ${id}`,`Card: ${r.name}`,`Amount: $${fmt(amount)}`,pr==null?`Rate: Please confirm availability`:`Customer rate: ₦${fmt(pr)}/$`,payout==null?`Estimated payout: Pending rate confirmation`:`Estimated payout: ₦${fmt(payout)}`,`Please confirm if this card is available before I send it.`];const url=`https://wa.me/${businessWhatsapp}?text=${encodeURIComponent(lines.join('\n'))}`;window.location.href=url;}
 function trackTrade(id){const t=trades.find(x=>x.id.toUpperCase()===String(id).trim().toUpperCase()),root=$('#trackResult');root.classList.remove('hidden');if(!t){root.innerHTML='<div class="error-card"><strong>Trade not found.</strong><p>Check the ID and try again.</p></div>';return;}root.innerHTML=tradeCustomerHTML(t);wireCustomerActions(t);}
 function tradeCustomerHTML(t){
   const steps=['Checking availability','Available — submit card','Card submitted','Processing','Approved — bank details required','Bank details received','Paid'];let idx=Math.max(0,steps.indexOf(t.status));if(t.status==='Rejected'||t.status==='Unavailable')idx=-1;
@@ -93,6 +94,20 @@ $('#lockAdmin').onclick=async()=>{try{await fetch('/api/admin-session',{method:'
 $$('.nav-btn').forEach(b=>b.onclick=()=>showView(b.dataset.view));$$('[data-go]').forEach(b=>b.onclick=()=>showView(b.dataset.go));
 $('#search').oninput=renderRates;$('#categoryFilter').onchange=renderRates;$('#tradeCard').onchange=updateQuote;$('#tradeAmount').oninput=updateQuote;$('#tradeForm').onsubmit=createTrade;
 $('#trackForm').onsubmit=e=>{e.preventDefault();trackTrade($('#trackId').value);};
+
+$('#savePercent').onclick=async()=>{
+  const percent=Number($('#customerPercent').value),report=$('#percentReport'),button=$('#savePercent');
+  report.classList.remove('hidden');
+  if(!Number.isFinite(percent)||percent<1||percent>100||Math.round(percent*100)!==percent*100){report.className='parse-report error';report.textContent='Enter a percentage from 1 to 100, with at most two decimal places.';return;}
+  button.disabled=true;
+  try{
+    const response=await fetch('/api/customer-percent',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({customerPercent:percent}),cache:'no-store'});
+    const data=await response.json();if(!response.ok)throw new Error(data.error||'Could not save percentage.');
+    customerPercent=data.customerPercent;await refreshLiveRates();
+    report.className='parse-report ok';report.textContent=`Saved. Customers now receive ${fmt(customerPercent)}% of the supplier rate.`;
+  }catch(error){report.className='parse-report error';report.textContent=error.message||'Could not save percentage.';}
+  finally{button.disabled=false;}
+};
 
 $('#publishRates').onclick=async()=>{
   const button=$('#publishRates'),report=$('#parseReport');
