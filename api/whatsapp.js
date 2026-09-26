@@ -1,4 +1,6 @@
 const { createHmac, timingSafeEqual } = require('node:crypto');
+const { parseSupplierRates } = require('../lib/supplier-rates');
+const { configured, publishRates } = require('../lib/rates-store');
 
 function safeEqual(a, b) {
   if (typeof a !== 'string' || typeof b !== 'string') return false;
@@ -41,8 +43,33 @@ module.exports = async function handler(req, res) {
   catch { return res.status(400).send('Invalid JSON'); }
   if (body.object !== 'whatsapp_business_account') return res.status(404).send('Unknown event');
 
-  // Future processing needs durable storage and idempotency. Do not log
-  // customer messages or claim the public rate board has been updated.
+  const trusted = new Set((process.env.TRUSTED_SUPPLIER_WA_IDS || '')
+    .split(',').map(n => n.replace(/\D/g, '')).filter(Boolean));
+  const expectedPhoneId = process.env.META_PHONE_NUMBER_ID;
+  if (!trusted.size || !expectedPhoneId) return res.status(200).json({ received: true });
+
+  try {
+    for (const entry of body.entry || []) {
+      for (const change of entry.changes || []) {
+        if (change.field !== 'messages' || String(change.value?.metadata?.phone_number_id) !== expectedPhoneId) continue;
+        for (const message of change.value?.messages || []) {
+          if (message.type !== 'text' || !trusted.has(String(message.from || '').replace(/\D/g, ''))) continue;
+          if (!/^[A-Za-z0-9._=:-]{5,300}$/.test(message.id || '')) continue;
+          const timestamp = Number(message.timestamp);
+          const now = Math.floor(Date.now() / 1000);
+          if (!Number.isInteger(timestamp) || timestamp < now - 86400 || timestamp > now + 300) continue;
+          const rates = parseSupplierRates(message.text?.body);
+          if (!rates) continue;
+          if (!configured()) return res.status(503).json({ error: 'Rate store not configured' });
+          await publishRates(message.id, timestamp, rates);
+        }
+      }
+    }
+  } catch (error) {
+    // Return a retryable failure to Meta; never log the incoming message body.
+    console.error('CardFlow rate store error', error?.message);
+    return res.status(503).json({ error: 'Rate update unavailable' });
+  }
   return res.status(200).json({ received: true });
 };
 
