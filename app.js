@@ -41,7 +41,7 @@ const DEFAULT_RATES = [
   {name:'US PSN',category:'PSN',supplier:870,min:10,max:200}
 ];
 
-let rates = read('cardflow_rates', DEFAULT_RATES);
+let rates = [];
 let trades = read('cardflow_trades', []);
 let customerPercent = Number(localStorage.getItem('cardflow_percent') || 70);
 let activities = read('cardflow_activity', []);
@@ -50,16 +50,16 @@ const supplierWhatsapp = '2348071895503';
 let businessWhatsapp = supplierWhatsapp;
 
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
-const fmt = n => new Intl.NumberFormat('en-NG').format(Math.round(Number(n)||0));
+const fmt = n => new Intl.NumberFormat('en-NG',{maximumFractionDigits:2}).format(Number(n)||0);
 const esc = s => String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
-const publicRate = r => r.supplier == null ? null : r.supplier * (customerPercent/100);
+const publicRate = r => r.customerRate !== undefined ? r.customerRate : r.supplier == null ? null : r.supplier * (customerPercent/100);
 const supplierTotal = (r, amount) => r && r.supplier != null ? r.supplier * Number(amount || 0) : null;
-const customerPayout = (r, amount) => { const total=supplierTotal(r,amount); return total==null ? null : total*(customerPercent/100); };
+const customerPayout = (r, amount) => r && r.customerRate !== undefined ? r.customerRate * Number(amount || 0) : (()=>{const total=supplierTotal(r,amount);return total==null?null:total*(customerPercent/100)})();
 const ownerMargin = (r, amount) => { const total=supplierTotal(r,amount); return total==null ? null : total*(1-customerPercent/100); };
 const rangeLabel = r => r.max ? `$${fmt(r.min)}–$${fmt(r.max)}` : `$${fmt(r.min)}+`;
 const OPEN = new Set(['Checking availability','Available — submit card','Card submitted','Processing','Approved — bank details required','Bank details received']);
 function read(k,f){ try { const v=JSON.parse(localStorage.getItem(k)||'null'); return v ?? f; } catch { return f; } }
-function save(){ localStorage.setItem('cardflow_rates',JSON.stringify(rates));localStorage.setItem('cardflow_trades',JSON.stringify(trades));localStorage.setItem('cardflow_percent',String(customerPercent));localStorage.setItem('cardflow_activity',JSON.stringify(activities.slice(0,50))); }
+function save(){ localStorage.setItem('cardflow_trades',JSON.stringify(trades));localStorage.setItem('cardflow_percent',String(customerPercent));localStorage.setItem('cardflow_activity',JSON.stringify(activities.slice(0,50))); }
 function log(msg){activities.unshift({msg,time:new Date().toLocaleString()});save();renderActivity();}
 function nowLabel(){return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});}
 
@@ -71,11 +71,12 @@ function renderRates(){
     el.querySelector('h3').textContent=r.name;el.querySelector('.range').textContent=`Accepted: ${rangeLabel(r)}`;el.querySelector('.rate-value').textContent=pr==null?'Check availability':`₦${fmt(pr)}/$`;
     el.querySelector('.trade-btn').onclick=()=>{showView('trade');$('#tradeCard').value=r.name;updateQuote();};grid.appendChild(el);
   });
+  if (!grid.children.length) grid.innerHTML='<p class="empty-state">No verified rates available yet. Confirm today’s rate with CardFlow before sending a card.</p>';
   $('#publishedCount').textContent=rates.length;$('#askCount').textContent=rates.filter(r=>r.supplier==null).length;
 }
 function renderTradeOptions(){const prev=$('#tradeCard').value;$('#tradeCard').innerHTML=rates.map(r=>`<option value="${esc(r.name)}">${esc(r.name)} — ${publicRate(r)==null?'ASK':'₦'+fmt(publicRate(r))+'/$'}</option>`).join('');if(rates.some(r=>r.name===prev))$('#tradeCard').value=prev;}
 function renderAdmin(){
-  $('#customerPercent').value=customerPercent;$('#supplierWhatsapp').value='+'+supplierWhatsapp;$('#businessWhatsapp').value=businessWhatsapp;$('#adminTable').innerHTML=rates.map(r=>`<tr><td>${esc(r.name)}</td><td>${rangeLabel(r)}</td><td class="private">${r.supplier==null?'ASK':'₦'+fmt(r.supplier)+'/$'}</td><td class="public">${publicRate(r)==null?'ASK':'₦'+fmt(publicRate(r))+'/$'}</td><td>${r.supplier==null?'Needs confirmation':'Published'}</td></tr>`).join('');
+  $('#customerPercent').value=70;$('#supplierWhatsapp').value='+'+supplierWhatsapp;$('#businessWhatsapp').value=businessWhatsapp;$('#adminTable').innerHTML=rates.map(r=>`<tr><td>${esc(r.name)}</td><td>${rangeLabel(r)}</td><td class="private">Private on server</td><td class="public">${publicRate(r)==null?'ASK':'₦'+fmt(publicRate(r))+'/$'}</td><td>${publicRate(r)==null?'Needs confirmation':'Published'}</td></tr>`).join('');
   $('#openTradeCount').textContent=trades.filter(t=>OPEN.has(t.status)).length;$('#awaitingPaymentCount').textContent=trades.filter(t=>t.status==='Bank details received').length;renderAdminTrades();
 }
 function renderActivity(){$('#activityList').innerHTML=(activities.length?activities:[{msg:'No activity yet',time:''}]).slice(0,10).map(a=>`<div class="activity-item"><strong>${esc(a.msg)}</strong><br><small>${esc(a.time)}</small></div>`).join('');}
@@ -94,6 +95,22 @@ function tradeActionHTML(t){
   return actions?`<div class="trade-actions">${actions}</div>`:'';
 }
 function renderAll(){renderRates();renderTradeOptions();renderAdmin();renderActivity();updateQuote();save();}
+
+async function refreshLiveRates(){
+  try {
+    const response=await fetch('/api/rates',{cache:'no-store'});
+    if(!response.ok)throw new Error('unavailable');
+    const data=await response.json();
+    if(!Array.isArray(data.rates))throw new Error('invalid');
+    rates=data.rates;
+    $('#lastUpdated').textContent=data.publishedAt?'Verified supplier update: '+new Date(data.publishedAt).toLocaleString():'Waiting for verified supplier rates';
+    renderRates();renderTradeOptions();renderAdmin();updateQuote();
+  }catch{
+    rates=[];
+    $('#lastUpdated').textContent='Live rates temporarily unavailable';
+    renderRates();renderTradeOptions();renderAdmin();updateQuote();
+  }
+}
 
 function inferCategory(name){const n=name.toLowerCase();if(n.includes('apple')||n.includes('itunes'))return'Apple';if(n.includes('steam'))return'Steam';if(n.includes('razer'))return'Razer';if(n.includes('xbox'))return'Xbox';if(n.includes('psn')||n.includes('playstation'))return'PSN';if(/sephora|macy|footlocker|nordstrom|lululemon|gamestop|doordash|nike|target|uber|adidas|best buy|home depot|eneba/.test(n))return'Gift Card';return'Other';}
 function cleanName(s){return String(s).replace(/\([^)]*\)/g,' ').replace(/[\*⭕🏀‼️=:【】]/g,' ').replace(/\s+/g,' ').trim();}
@@ -141,8 +158,8 @@ $('#trackForm').onsubmit=e=>{e.preventDefault();trackTrade($('#trackId').value);
 $('#customerPercent').onchange=e=>{customerPercent=Math.max(1,Math.min(100,Number(e.target.value)||70));log(`Customer rate rule changed to ${customerPercent}%`);renderAll();};
 
 $('#loadSample').onclick=()=>{$('#supplierText').value=SAMPLE_MESSAGE;};
-$('#parseRates').onclick=()=>{const parsed=parseSupplierText($('#supplierText').value);const report=$('#parseReport');report.classList.remove('hidden');if(!parsed.length){report.className='parse-report error';report.textContent='No recognizable rate lines found.';return;}rates=parsed;report.className='parse-report ok';report.textContent=`WhatsApp simulation complete: ${parsed.length} rates updated. ${parsed.filter(r=>r.supplier==null).length} are ASK and still require confirmation.`;$('#lastUpdated').textContent='Updated '+nowLabel();log(`Simulated WhatsApp update: ${parsed.length} rates published`);renderAll();};
+$('#parseRates').onclick=()=>{const parsed=parseSupplierText($('#supplierText').value);const report=$('#parseReport');report.classList.remove('hidden');if(!parsed.length){report.className='parse-report error';report.textContent='No recognizable rate lines found.';return;}report.className='parse-report ok';report.textContent=`Preview only: ${parsed.length} rates recognized. Only a verified supplier WhatsApp message can publish to the live board.`;};
 
 function refreshWhatsappLink(){const a=$('#whatsappLink');a.href=`https://wa.me/${businessWhatsapp}?text=${encodeURIComponent('Hi, I need help with a gift card trade.')}`;a.onclick=null;}
 refreshWhatsappLink();
-renderAll();openAdmin();
+renderAll();openAdmin();refreshLiveRates();setInterval(refreshLiveRates,30000);
