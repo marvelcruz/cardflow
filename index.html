@@ -88,8 +88,7 @@
         <div class="login-card">
           <div class="brand-mark big">C</div><p class="eyebrow">PRIVATE ADMIN</p><h2 id="loginTitle">Admin access</h2>
           <p class="muted" id="loginHelp">Enter your admin PIN to continue.</p>
-          <form id="adminLoginForm"><input id="adminPin" type="password" inputmode="numeric" minlength="4" maxlength="12" placeholder="Admin PIN" required /><button class="primary full">Continue</button></form>
-          <p class="tiny" id="pinSetupNote"></p>
+          <form id="adminLoginForm"><input id="adminPin" type="password" inputmode="numeric" pattern="[0-9]{10}" minlength="10" maxlength="10" autocomplete="off" placeholder="10-digit admin PIN" required /><button class="primary full">Continue</button></form>
         </div>
       </div>
 
@@ -111,7 +110,6 @@
             <label>Customer contact WhatsApp<input id="supplierWhatsapp" type="tel" value="+2348071895503" readonly /></label>
             <input id="businessWhatsapp" type="hidden" value="2348071895503" />
             <label>WhatsApp message<textarea id="supplierText" rows="16" placeholder="Paste the full supplier WhatsApp message here..."></textarea></label>
-            <label>Private publish key<input id="publishKey" type="password" autocomplete="off" placeholder="Enter your publish key" /><span class="tiny">Required to change the live board. This key is not saved in your browser.</span></label>
             <button id="publishRates" class="primary full">Publish rates to website</button>
             <div id="parseReport" class="parse-report hidden"></div>
           </div>
