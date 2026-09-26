@@ -49,8 +49,22 @@
           <option value="Apple">Apple</option><option value="Steam">Steam</option><option value="Razer">Razer</option>
           <option value="Xbox">Xbox</option><option value="PSN">PSN</option><option value="Gift Card">Gift Cards</option><option value="Other">Other</option>
         </select>
+        <button id="openStatus" class="secondary" type="button">Status screenshots</button>
       </div>
       <div id="rateGrid" class="rate-grid"></div>
+    </section>
+
+    <section id="status" class="view">
+      <div class="status-controls">
+        <button id="closeStatus" class="secondary" type="button">← Back to rates</button>
+        <div class="status-pages"><button id="statusPrev" class="secondary" type="button" aria-label="Previous status page">←</button><strong id="statusPageLabel">1 / 1</strong><button id="statusNext" class="secondary" type="button" aria-label="Next status page">→</button></div>
+      </div>
+      <div id="statusSlide" class="status-slide" aria-label="Customer rates for WhatsApp Status">
+        <div class="status-heading"><div class="status-brand"><span class="status-brand-mark">C</span><span>CardFlow</span></div><p>CUSTOMER GIFT CARD RATES</p><h2>Today’s rates</h2><span id="statusUpdated">Waiting for verified rates</span></div>
+        <div id="statusRows" class="status-rows"></div>
+        <div class="status-footer"><strong>Have a card to sell?</strong><span>Message us on WhatsApp: +234 807 189 5503</span><small>Confirm availability before sending a card. Rates may change.</small><small id="statusSlidePage">1 / 1</small></div>
+      </div>
+      <p class="status-instruction">Screenshot the card above. Tap → for the next set of rates.</p>
     </section>
 
     <section id="trade" class="view">

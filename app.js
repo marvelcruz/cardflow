@@ -3,6 +3,8 @@ let trades = read('cardflow_trades', []);
 let customerPercent = Number(localStorage.getItem('cardflow_percent') || 70);
 let activities = read('cardflow_activity', []);
 let adminUnlocked = false;
+let statusPage = 0;
+let publishedAt = null;
 const supplierWhatsapp = '2348071895503';
 let businessWhatsapp = supplierWhatsapp;
 
@@ -30,6 +32,18 @@ function renderRates(){
   });
   if (!grid.children.length) grid.innerHTML='<p class="empty-state">No verified rates available yet. Confirm today’s rate with CardFlow before sending a card.</p>';
   $('#publishedCount').textContent=rates.length;$('#askCount').textContent=rates.filter(r=>r.supplier==null).length;
+}
+function renderStatus(){
+  const q=$('#search').value.toLowerCase(),cat=$('#categoryFilter').value;
+  const visible=rates.filter(r=>publicRate(r)!=null && r.name.toLowerCase().includes(q) && (cat==='all'||r.category===cat));
+  const perPage=12,pages=Math.max(1,Math.ceil(visible.length/perPage));
+  statusPage=Math.min(statusPage,pages-1);
+  $('#statusPageLabel').textContent=`${statusPage+1} / ${pages}`;
+  $('#statusSlidePage').textContent=`${statusPage+1} / ${pages}`;
+  $('#statusPrev').disabled=statusPage===0;$('#statusNext').disabled=statusPage>=pages-1;
+  $('#statusUpdated').textContent=publishedAt?`Updated ${new Date(publishedAt).toLocaleString()}`:'Waiting for verified rates';
+  const items=visible.slice(statusPage*perPage,(statusPage+1)*perPage);
+  $('#statusRows').innerHTML=items.length?items.map(r=>`<div class="status-row"><div class="status-name"><strong>${esc(r.name)}</strong><small>${esc(rangeLabel(r))}</small></div><b>₦${fmt(publicRate(r))}/$</b></div>`).join(''):'<p class="status-empty">No published customer rates yet.</p>';
 }
 function rateForAmount(name,amount){return rates.find(r=>r.name===name && r.min!=null && amount>=r.min && (r.max==null||amount<=r.max));}
 function renderTradeOptions(){const prev=$('#tradeCard').value;const names=[...new Set(rates.map(r=>r.name))];$('#tradeCard').innerHTML=names.map(name=>`<option value="${esc(name)}">${esc(name)}</option>`).join('');if(names.includes(prev))$('#tradeCard').value=prev;}
@@ -62,17 +76,19 @@ async function refreshLiveRates(){
     if(!Array.isArray(data.rates))throw new Error('invalid');
     if(Number.isFinite(data.customerPercent))customerPercent=data.customerPercent;
     rates=data.rates;
+    publishedAt=data.publishedAt;
     $('#lastUpdated').textContent=data.publishedAt?'Verified supplier update: '+new Date(data.publishedAt).toLocaleString():'Waiting for verified supplier rates';
-    renderRates();renderTradeOptions();renderAdmin();updateQuote();
+    renderRates();renderTradeOptions();renderAdmin();renderStatus();updateQuote();
   }catch{
     rates=[];
+    publishedAt=null;
     $('#lastUpdated').textContent='Live rates temporarily unavailable';
-    renderRates();renderTradeOptions();renderAdmin();updateQuote();
+    renderRates();renderTradeOptions();renderAdmin();renderStatus();updateQuote();
   }
 }
 
 function updateQuote(){const amt=Number($('#tradeAmount').value||0),r=rateForAmount($('#tradeCard').value,amt),pr=r?publicRate(r):null,box=$('#quoteBox'),math=$('#quoteMath');const payout=r?customerPayout(r,amt):null;box.querySelector('strong').textContent=payout==null?'ASK':`₦${fmt(payout)}`;box.querySelector('small').textContent=pr==null?'Enter an accepted amount or ask CardFlow to confirm.':`Customer rate: ₦${fmt(pr)}/$`;if(!math)return;if(pr==null||!amt){math.innerHTML='';return;}math.innerHTML=`<span>$${fmt(amt)} × ₦${fmt(pr)}/$</span><b>= ₦${fmt(payout)}</b>`;}
-function showView(id){if(id==='admin')openAdmin();$$('.view').forEach(v=>v.classList.toggle('active',v.id===id));$$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===id));window.scrollTo({top:0,behavior:'smooth'});}
+function showView(id){if(id==='admin')openAdmin();document.body.classList.toggle('status-mode',id==='status');$$('.view').forEach(v=>v.classList.toggle('active',v.id===id));$$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===id));if(id==='status')renderStatus();window.scrollTo({top:0,behavior:'smooth'});}
 function createTrade(e){e.preventDefault();const amount=Number($('#tradeAmount').value),r=rateForAmount($('#tradeCard').value,amount);if(!r)return alert('This amount is not listed as accepted. Please ask CardFlow to confirm.');const id='GC-'+Math.random().toString(36).slice(2,7).toUpperCase(),pr=publicRate(r),payout=customerPayout(r,amount),supplierValue=supplierTotal(r,amount),margin=ownerMargin(r,amount);const t={id,card:r.name,amount,rate:pr,payout,supplierValue,margin,customerPercent,status:'Checking availability',created:new Date().toISOString(),cardDetails:null,bank:null};trades.unshift(t);log(`New trade ${id}: ${r.name} $${amount}`);renderAll();const lines=[`Hi, I want to sell a gift card.`,`Trade ID: ${id}`,`Card: ${r.name}`,`Amount: $${fmt(amount)}`,pr==null?`Rate: Please confirm availability`:`Customer rate: ₦${fmt(pr)}/$`,payout==null?`Estimated payout: Pending rate confirmation`:`Estimated payout: ₦${fmt(payout)}`,`Please confirm if this card is available before I send it.`];const url=`https://wa.me/${businessWhatsapp}?text=${encodeURIComponent(lines.join('\n'))}`;window.location.href=url;}
 function trackTrade(id){const t=trades.find(x=>x.id.toUpperCase()===String(id).trim().toUpperCase()),root=$('#trackResult');root.classList.remove('hidden');if(!t){root.innerHTML='<div class="error-card"><strong>Trade not found.</strong><p>Check the ID and try again.</p></div>';return;}root.innerHTML=tradeCustomerHTML(t);wireCustomerActions(t);}
 function tradeCustomerHTML(t){
@@ -93,6 +109,11 @@ $('#lockAdmin').onclick=async()=>{try{await fetch('/api/admin-session',{method:'
 
 $$('.nav-btn').forEach(b=>b.onclick=()=>showView(b.dataset.view));$$('[data-go]').forEach(b=>b.onclick=()=>showView(b.dataset.go));
 $('#search').oninput=renderRates;$('#categoryFilter').onchange=renderRates;$('#tradeCard').onchange=updateQuote;$('#tradeAmount').oninput=updateQuote;$('#tradeForm').onsubmit=createTrade;
+$('#openStatus').onclick=()=>{statusPage=0;showView('status');};
+$('#closeStatus').onclick=()=>showView('rates');
+$('#statusPrev').onclick=()=>{if(statusPage>0){statusPage--;renderStatus();$('#statusSlide').scrollIntoView({block:'start'});}};
+$('#statusNext').onclick=()=>{statusPage++;renderStatus();$('#statusSlide').scrollIntoView({block:'start'});};
+$('#statusSlide').onclick=()=>{if(!$('#statusNext').disabled)$('#statusNext').click();};
 $('#trackForm').onsubmit=e=>{e.preventDefault();trackTrade($('#trackId').value);};
 
 $('#savePercent').onclick=async()=>{

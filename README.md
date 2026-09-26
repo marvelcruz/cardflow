@@ -31,3 +31,6 @@ Sign in to Admin with the PIN. Change **Customer receives** and click **Save per
 You can paste multiple supplier updates together. For each matching card and accepted amount, the highest numeric supplier rate wins; an ASK rate never overrides a numeric rate. Overlapping amount ranges are split so each amount uses the correct best rate. A numeric rate without an accepted amount is displayed as ASK until the amount is confirmed. Do not publish example or stale messages as current rates.
 
 The Meta webhook remains available for verification and signed delivery, but it does not publish group messages. Manual publishing does not require the suppliers to change their WhatsApp workflow. Trade statuses still use each browser's local storage and are not a shared back office.
+
+## WhatsApp Status screenshots
+On a phone, open **Live Rates → Status screenshots**. CardFlow shows up to 12 priced customer rate bands on each 9:16 card. Screenshot the card, tap it for the next page, and post the images through WhatsApp Business → Updates → Add status. Search and category selection on the main board also filter the status pages. Supplier rates and unconfirmed ASK prices do not appear in the status cards. Posting to WhatsApp Status is manual.
