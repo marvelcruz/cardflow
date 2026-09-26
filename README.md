@@ -1,4 +1,4 @@
-# MARVELS RATE
+# Marvel's Rate
 
 Gift-card rate portal with WhatsApp handoff and Meta WhatsApp Business Platform webhook support.
 
@@ -11,9 +11,9 @@ Gift-card rate portal with WhatsApp handoff and Meta WhatsApp Business Platform 
 Example: Chime Mail 1247/$ × $100 = ₦124,700 total, ₦37,410 margin, ₦87,290 customer payout.
 
 ## WhatsApp
-Current MARVELS RATE WhatsApp: `+2348071895503`.
+Current Marvel's Rate WhatsApp: `+2348071895503`.
 
-Customer trade buttons open the customer's own WhatsApp with a pre-filled message to MARVELS RATE.
+Customer trade buttons open the customer's own WhatsApp with a pre-filled message to Marvel's Rate.
 
 The Vercel webhook route is:
 
@@ -33,4 +33,4 @@ You can paste multiple supplier updates together. For each matching card and acc
 The Meta webhook remains available for verification and signed delivery, but it does not publish group messages. Manual publishing does not require the suppliers to change their WhatsApp workflow. Trade statuses still use each browser's local storage and are not a shared back office.
 
 ## WhatsApp Status screenshots
-On a phone, open **Live Rates → Status screenshots**. MARVELS RATE shows up to 12 priced customer rate bands on each 9:16 card. Screenshot the card, tap it for the next page, and post the images through WhatsApp Business → Updates → Add status. Search and category selection on the main board also filter the status pages. Supplier rates and unconfirmed ASK prices do not appear in the status cards. Posting to WhatsApp Status is manual.
+On a phone, open **Live Rates → Status screenshots**. Marvel's Rate shows up to 12 priced customer rate bands on each 9:16 card. Screenshot the card, tap it for the next page, and post the images through WhatsApp Business → Updates → Add status. Search and category selection on the main board also filter the status pages. Supplier rates and unconfirmed ASK prices do not appear in the status cards. Posting to WhatsApp Status is manual.
