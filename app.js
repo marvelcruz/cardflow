@@ -1,46 +1,3 @@
-const SAMPLE_MESSAGE = `*🏀🏀Bingo rate update(00.00)🏀🏀*
-*The price is subject to change at any time. Please inquire again before issuing the card*
-*Chime Mail(30min)*: 1247/$ 200-3000
-*Chime Tag(30min)*: 1125/$ 200-3000
-*Eneba EU*： 1350/$ 50+
-*Sephora*: 1105/$ 100-500
-*Moneypak*: 1175/$ 100-500
-*Lululemon*: ask/$ 200-500
-*Target*: ASK/$ 100-500
-⭕*======【Gold Razer】======*⭕
-*US* 1165/$ 25-500
-*US Green(16code)* 1145/$ 25-500
-*SG* 835/$ 25-400
-⭕*======【Steam】======⭕*
-*US Steam*: 1022/$ 20-500
-*EU Steam*: 1155/$ 20-500
-*UK Steam*: 1343/$ 20-500
-*CA Steam*: 705/$ 20-500
-*AU Steam*: 700/$ 20-500
-*NZ Steam*: 562/$ 20-500
-⭕*======【Xbox】======⭕*
-*US*: 1083/$ 20-500
-*UK*: 1305/$ 20-500
-*EU*: 1035/$ 20-500
-⭕*======【Other Apple Fast】======*
-*CA Apple*: 775/$ 200-500
-*UK Apple*: 1330/$ 150-250
-*AU Apple*: 700/$ 300-500
-*Japan Apple*: ASK/$ 1-9000
-⭕*====【PSN (PlayStation)】====⭕*
-*US* 870/$ 10-200
-*UK* 840/$ 10-200`;
-
-const DEFAULT_RATES = [
-  {name:'Chime Mail',category:'Other',supplier:1247,min:200,max:3000},{name:'Chime Tag',category:'Other',supplier:1125,min:200,max:3000},
-  {name:'Eneba EU',category:'Gift Card',supplier:1350,min:50,max:null},{name:'Sephora',category:'Gift Card',supplier:1105,min:100,max:500},
-  {name:'Moneypak',category:'Gift Card',supplier:1175,min:100,max:500},{name:'Lululemon',category:'Gift Card',supplier:null,min:200,max:500},
-  {name:'Target',category:'Gift Card',supplier:null,min:100,max:500},{name:'US Razer Gold',category:'Razer',supplier:1165,min:25,max:500},
-  {name:'US Steam',category:'Steam',supplier:1022,min:20,max:500},{name:'UK Steam',category:'Steam',supplier:1343,min:20,max:500},
-  {name:'US Xbox',category:'Xbox',supplier:1083,min:20,max:500},{name:'UK Apple',category:'Apple',supplier:1330,min:150,max:250},
-  {name:'US PSN',category:'PSN',supplier:870,min:10,max:200}
-];
-
 let rates = [];
 let trades = read('cardflow_trades', []);
 let customerPercent = Number(localStorage.getItem('cardflow_percent') || 70);
@@ -112,26 +69,6 @@ async function refreshLiveRates(){
   }
 }
 
-function inferCategory(name){const n=name.toLowerCase();if(n.includes('apple')||n.includes('itunes'))return'Apple';if(n.includes('steam'))return'Steam';if(n.includes('razer'))return'Razer';if(n.includes('xbox'))return'Xbox';if(n.includes('psn')||n.includes('playstation'))return'PSN';if(/sephora|macy|footlocker|nordstrom|lululemon|gamestop|doordash|nike|target|uber|adidas|best buy|home depot|eneba/.test(n))return'Gift Card';return'Other';}
-function cleanName(s){return String(s).replace(/\([^)]*\)/g,' ').replace(/[\*⭕🏀‼️=:【】]/g,' ').replace(/\s+/g,' ').trim();}
-function normalizeSection(s){const x=cleanName(s);if(/gold razer/i.test(x))return'Razer Gold';if(/psn|playstation/i.test(x))return'PSN';if(/other apple/i.test(x))return'Apple';return x;}
-function parseSupplierText(text){
-  const out=[];let section='';let lastStandaloneName='';const lines=text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
-  for(const raw of lines){
-    const sec=raw.match(/【([^】]+)】/);if(sec){section=normalizeSection(sec[1]);lastStandaloneName='';continue;}
-    if(/price is subject|please do not|past two weeks|if you have any questions|spend|rate update/i.test(raw))continue;
-    const line=raw.replace(/：/g,':').replace(/\u00a0/g,' ');
-    if(/^\*?[A-Za-z][A-Za-z /&]+\*?$/.test(line)&&!/(ask|\d)/i.test(line)){lastStandaloneName=cleanName(line);continue;}
-    const ask=line.match(/^\*?(.+?)\*?\s*:?\s*(?:ASK|ask)\s*\/\$\s*(\d+(?:\.\d+)?)\s*(?:-\s*(\d+(?:\.\d+)?)|\+)?/i);
-    const numeric=line.match(/^\*?(.+?)\*?\s*:?\s*([0-9]+(?:\.[0-9]+)?)\s*\/\$?\s*(\d+(?:\.\d+)?)\s*(?:-\s*(\d+(?:\.\d+)?)|\+)?/i);
-    const bare=line.match(/^([0-9]+(?:\.[0-9]+)?)\s*\/\$?\s*(\d+(?:\.\d+)?)\s*(?:-\s*(\d+(?:\.\d+)?)|\+)?/i);
-    if(ask){let name=cleanName(ask[1]);if(section&&/^(us|uk|eu|ca|au|nz|ch|sg|pn)$/i.test(name))name=`${name} ${section}`;if(lastStandaloneName&&name.length<3)name=`${lastStandaloneName} ${name}`;out.push({name,category:inferCategory(name+' '+section),supplier:null,min:Number(ask[2]),max:ask[3]?Number(ask[3]):null});lastStandaloneName='';}
-    else if(numeric){let name=cleanName(numeric[1]);if(section&&/^(us|uk|eu|ca|au|nz|ch|sg|pn)$/i.test(name))name=`${name} ${section}`;if(section&&/^us green/i.test(name))name=`${name} ${section}`;out.push({name,category:inferCategory(name+' '+section),supplier:Number(numeric[2]),min:Number(numeric[3]),max:numeric[4]?Number(numeric[4]):null});lastStandaloneName='';}
-    else if(bare&&(section||lastStandaloneName)){const name=lastStandaloneName||section;out.push({name,category:inferCategory(name+' '+section),supplier:Number(bare[1]),min:Number(bare[2]),max:bare[3]?Number(bare[3]):null});lastStandaloneName='';}
-  }
-  const map=new Map();out.filter(x=>x.name&&Number.isFinite(x.min)).forEach(r=>map.set(`${r.name.toLowerCase()}|${r.min}|${r.max??''}`,r));return[...map.values()];
-}
-
 function updateQuote(){const r=rates.find(x=>x.name===$('#tradeCard').value),amt=Number($('#tradeAmount').value||0),pr=r?publicRate(r):null,box=$('#quoteBox'),math=$('#quoteMath');const payout=r?customerPayout(r,amt):null;box.querySelector('strong').textContent=payout==null?'ASK':`₦${fmt(payout)}`;box.querySelector('small').textContent=pr==null?'We need to confirm today’s rate first.':`Customer rate: ₦${fmt(pr)}/$`;if(!math)return;if(pr==null||!amt){math.innerHTML='';return;}math.innerHTML=`<span>$${fmt(amt)} × ₦${fmt(pr)}/$</span><b>= ₦${fmt(payout)}</b>`;}
 function showView(id){if(id==='admin')openAdmin();$$('.view').forEach(v=>v.classList.toggle('active',v.id===id));$$('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===id));window.scrollTo({top:0,behavior:'smooth'});}
 function createTrade(e){e.preventDefault();const r=rates.find(x=>x.name===$('#tradeCard').value),amount=Number($('#tradeAmount').value);if(!r)return;if(r.min&&amount<r.min)return alert(`Minimum for this card is $${r.min}`);if(r.max&&amount>r.max)return alert(`Maximum for this card is $${r.max}`);const id='GC-'+Math.random().toString(36).slice(2,7).toUpperCase(),pr=publicRate(r),payout=customerPayout(r,amount),supplierValue=supplierTotal(r,amount),margin=ownerMargin(r,amount);const t={id,card:r.name,amount,rate:pr,payout,supplierValue,margin,status:'Checking availability',created:new Date().toISOString(),cardDetails:null,bank:null};trades.unshift(t);log(`New trade ${id}: ${r.name} $${amount}`);renderAll();const lines=[`Hi, I want to sell a gift card.`,`Trade ID: ${id}`,`Card: ${r.name}`,`Amount: $${fmt(amount)}`,pr==null?`Rate: Please confirm availability`:`Customer rate: ₦${fmt(pr)}/$`,payout==null?`Estimated payout: Pending rate confirmation`:`Estimated payout: ₦${fmt(payout)}`,`Please confirm if this card is available before I send it.`];const url=`https://wa.me/${businessWhatsapp}?text=${encodeURIComponent(lines.join('\n'))}`;window.location.href=url;}
@@ -155,10 +92,23 @@ $('#lockAdmin').onclick=()=>{adminUnlocked=false;openAdmin();};
 $$('.nav-btn').forEach(b=>b.onclick=()=>showView(b.dataset.view));$$('[data-go]').forEach(b=>b.onclick=()=>showView(b.dataset.go));
 $('#search').oninput=renderRates;$('#categoryFilter').onchange=renderRates;$('#tradeCard').onchange=updateQuote;$('#tradeAmount').oninput=updateQuote;$('#tradeForm').onsubmit=createTrade;
 $('#trackForm').onsubmit=e=>{e.preventDefault();trackTrade($('#trackId').value);};
-$('#customerPercent').onchange=e=>{customerPercent=Math.max(1,Math.min(100,Number(e.target.value)||70));log(`Customer rate rule changed to ${customerPercent}%`);renderAll();};
 
-$('#loadSample').onclick=()=>{$('#supplierText').value=SAMPLE_MESSAGE;};
-$('#parseRates').onclick=()=>{const parsed=parseSupplierText($('#supplierText').value);const report=$('#parseReport');report.classList.remove('hidden');if(!parsed.length){report.className='parse-report error';report.textContent='No recognizable rate lines found.';return;}report.className='parse-report ok';report.textContent=`Preview only: ${parsed.length} rates recognized. Only a verified supplier WhatsApp message can publish to the live board.`;};
+$('#publishRates').onclick=async()=>{
+  const button=$('#publishRates'),report=$('#parseReport');
+  const message=$('#supplierText').value.trim(),key=$('#publishKey').value;
+  report.classList.remove('hidden');
+  if(!message||!key){report.className='parse-report error';report.textContent='Paste the full rate message and enter your private publish key.';return;}
+  button.disabled=true;button.textContent='Publishing…';
+  try{
+    const response=await fetch('/api/publish-rates',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({message}),cache:'no-store'});
+    const result=await response.json();
+    if(!response.ok)throw new Error(result.error||'Could not publish rates.');
+    $('#publishKey').value='';
+    report.className='parse-report ok';report.textContent=`Published ${result.published} rates. The shared board is now updated.`;
+    await refreshLiveRates();
+  }catch(error){report.className='parse-report error';report.textContent=error.message||'Could not publish rates.';}
+  finally{button.disabled=false;button.textContent='Publish rates to website';}
+};
 
 function refreshWhatsappLink(){const a=$('#whatsappLink');a.href=`https://wa.me/${businessWhatsapp}?text=${encodeURIComponent('Hi, I need help with a gift card trade.')}`;a.onclick=null;}
 refreshWhatsappLink();
