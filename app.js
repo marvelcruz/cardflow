@@ -84,10 +84,10 @@ function tradeCustomerHTML(t){
 function wireCustomerActions(t){const cf=$('#cardSubmitForm');if(cf)cf.onsubmit=e=>{e.preventDefault();const f=$('#cardFile').files[0];t.cardDetails={code:$('#cardCode').value.trim(),fileName:f?f.name:null,submittedAt:new Date().toISOString()};t.status='Card submitted';log(`Card submitted for ${t.id}`);renderAll();trackTrade(t.id);};const bf=$('#bankForm');if(bf)bf.onsubmit=e=>{e.preventDefault();t.bank={bankName:$('#bankName').value.trim(),accountNumber:$('#accountNumber').value.trim(),accountName:$('#accountName').value.trim()};t.status='Bank details received';log(`Bank details received for ${t.id}`);renderAll();trackTrade(t.id);};}
 function advanceTrade(id,action){const t=trades.find(x=>x.id===id);if(!t)return;const map={available:'Available — submit card',unavailable:'Unavailable',processing:'Processing',approved:'Approved — bank details required',rejected:'Rejected',paid:'Paid'};t.status=map[action]||t.status;log(`${id} → ${t.status}`);renderAll();}
 
-async function hashPin(pin){const data=new TextEncoder().encode(pin);const hash=await crypto.subtle.digest('SHA-256',data);return [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');}
-function openAdmin(){const has=!!localStorage.getItem('cardflow_admin_hash');$('#adminApp').classList.toggle('hidden',!adminUnlocked);$('#adminLock').classList.toggle('hidden',adminUnlocked);$('#loginTitle').textContent=has?'Admin access':'Create admin PIN';$('#loginHelp').textContent=has?'Enter your admin PIN to continue.':'Choose a PIN for this prototype. You will use it to open the private admin area on this browser.';$('#pinSetupNote').textContent=has?'':'For a live multi-user site, this will be replaced with server-side authentication.';}
-$('#adminLoginForm').onsubmit=async e=>{e.preventDefault();const pin=$('#adminPin').value.trim();if(pin.length<4)return;const h=await hashPin(pin),stored=localStorage.getItem('cardflow_admin_hash');if(!stored){localStorage.setItem('cardflow_admin_hash',h);adminUnlocked=true;log('Admin PIN created');}else if(stored===h){adminUnlocked=true;}else{return alert('Incorrect admin PIN.');}$('#adminPin').value='';openAdmin();};
-$('#lockAdmin').onclick=()=>{adminUnlocked=false;openAdmin();};
+function openAdmin(){$('#adminApp').classList.toggle('hidden',!adminUnlocked);$('#adminLock').classList.toggle('hidden',adminUnlocked);}
+async function checkAdminSession(){try{const response=await fetch('/api/admin-session',{cache:'no-store',credentials:'same-origin'});const data=await response.json();adminUnlocked=!!data.authenticated;}catch{adminUnlocked=false;}openAdmin();}
+$('#adminLoginForm').onsubmit=async e=>{e.preventDefault();const pin=$('#adminPin').value.trim();const button=e.target.querySelector('button');button.disabled=true;try{const response=await fetch('/api/admin-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin}),credentials:'same-origin',cache:'no-store'});const data=await response.json();if(!response.ok)throw new Error(data.error||'Could not sign in.');adminUnlocked=true;$('#adminPin').value='';openAdmin();}catch(error){alert(error.message);}finally{button.disabled=false;}};
+$('#lockAdmin').onclick=async()=>{try{await fetch('/api/admin-session',{method:'POST',credentials:'same-origin'});}finally{adminUnlocked=false;openAdmin();}};
 
 $$('.nav-btn').forEach(b=>b.onclick=()=>showView(b.dataset.view));$$('[data-go]').forEach(b=>b.onclick=()=>showView(b.dataset.go));
 $('#search').oninput=renderRates;$('#categoryFilter').onchange=renderRates;$('#tradeCard').onchange=updateQuote;$('#tradeAmount').oninput=updateQuote;$('#tradeForm').onsubmit=createTrade;
@@ -95,15 +95,14 @@ $('#trackForm').onsubmit=e=>{e.preventDefault();trackTrade($('#trackId').value);
 
 $('#publishRates').onclick=async()=>{
   const button=$('#publishRates'),report=$('#parseReport');
-  const message=$('#supplierText').value.trim(),key=$('#publishKey').value;
+  const message=$('#supplierText').value.trim();
   report.classList.remove('hidden');
-  if(!message||!key){report.className='parse-report error';report.textContent='Paste the full rate message and enter your private publish key.';return;}
+  if(!message){report.className='parse-report error';report.textContent='Paste the full supplier rate message.';return;}
   button.disabled=true;button.textContent='Publishing…';
   try{
-    const response=await fetch('/api/publish-rates',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({message}),cache:'no-store'});
+    const response=await fetch('/api/publish-rates',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message}),credentials:'same-origin',cache:'no-store'});
     const result=await response.json();
     if(!response.ok)throw new Error(result.error||'Could not publish rates.');
-    $('#publishKey').value='';
     report.className='parse-report ok';report.textContent=`Published ${result.published} rates. The shared board is now updated.`;
     await refreshLiveRates();
   }catch(error){report.className='parse-report error';report.textContent=error.message||'Could not publish rates.';}
@@ -112,4 +111,4 @@ $('#publishRates').onclick=async()=>{
 
 function refreshWhatsappLink(){const a=$('#whatsappLink');a.href=`https://wa.me/${businessWhatsapp}?text=${encodeURIComponent('Hi, I need help with a gift card trade.')}`;a.onclick=null;}
 refreshWhatsappLink();
-renderAll();openAdmin();refreshLiveRates();setInterval(refreshLiveRates,30000);
+renderAll();openAdmin();checkAdminSession();refreshLiveRates();setInterval(refreshLiveRates,30000);
